@@ -6,7 +6,7 @@
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS departamentos (
-    id          CHAR(36)      NOT NULL,
+    id          VARCHAR(50)   NOT NULL,
     nombre      VARCHAR(100)  NOT NULL,
     descripcion TEXT          NOT NULL,
     created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,

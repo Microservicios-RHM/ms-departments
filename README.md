@@ -1,78 +1,131 @@
-# ms-departments
+# Reto 2: empleados y departamentos
 
-## Project
+Orquestación del sistema de onboarding con dos microservicios independientes:
 
-PHP 8.3 microservice for department management, backed by MySQL 8.4. Runs entirely inside Docker — no local PHP or MySQL needed. It is **independent** of any other microservice (own network `departamentos-red`, own volume `departamentos-datos`, own port).
+| Componente | Tecnología | Persistencia | Puerto host |
+|---|---|---|---:|
+| `empleados-service` | Node.js 24 + TypeScript | PostgreSQL 17 | 8080 |
+| `departamentos-service` | PHP 8.3 + Apache | MySQL 8.4 | 8081 |
+| `database-empleados` | PostgreSQL 17 | `rhm-employees-data` | 5433 |
+| `database-departamentos` | MySQL 8.4 | `rhm-departments-data` | 3307 |
 
-## Common commands
-
-All daily operations go through `make`. Run `make ayuda` to see the full list.
-
-```bash
-make init      # First-time setup: copies .env.example → .env, builds images, starts containers
-make up        # Start containers (after init)
-make down      # Stop containers (data is preserved)
-make reset     # Stop containers AND delete the DB volume (re-runs database/init/ scripts)
-make build     # Rebuild the API image without cache
-make logs      # Tail all container logs
-make sh        # Open a bash shell inside the API container
-make db        # Open a MySQL shell inside the DB container
-make install   # Run composer install inside the API container
-make migrate   # Apply pending migrations (scripts/migrate.sh)
-make test      # Run PHPUnit inside the API container
-make salud     # Hit GET /salud to verify the service is up
-```
-
-Before the first `make init`, copy the environment file and fill in the values:
+Los repositorios `ms-departments` y `ms-employees` deben estar como carpetas hermanas de
+`rhm-database-infrastructure`. El único Compose del sistema está en esa carpeta. Ejecútelo allí:
 
 ```bash
+cd ../rhm-database-infrastructure
 cp .env.example .env
+docker compose up --build
 ```
 
-Required `.env` variables: `APP_ENV`, `APP_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_ROOT_PASSWORD`, `DB_PORT_HOST`.
+El archivo `.env` central es opcional porque Compose incluye valores de desarrollo seguros por defecto,
+pero permite personalizar puertos y credenciales sin modificar el YAML. No debe subirse a Git.
 
-## Architecture
+Para detener conservando los datos:
 
-### Docker layout
-
-The `docker-compose.yml` defines two services:
-
-- **departamentos-api** — PHP 8.3 + Apache, built from `docker/php/Dockerfile` (multi-stage: Composer resolves dependencies in a `composer:2` stage; only `vendor/` is copied into the runtime image). Waits for the DB healthcheck before starting.
-- **departamentos-db** — MySQL 8.4. SQL files placed in `database/init/` are executed automatically on first volume creation (mounted read-only at `/docker-entrypoint-initdb.d`). This is the shared team script mechanism for schema creation.
-
-The root-level `Dockerfile` is a draft/reference; `docker-compose.yml` uses `docker/php/Dockerfile`.
-
-### Expected directory structure
-
-```
-docker/
-  php/
-    Dockerfile       # Multi-stage build (composer → php:8.3-apache)
-    vhost.conf       # Apache virtual host (enables mod_rewrite for clean URLs)
-    php.ini          # PHP runtime settings (opcache, etc.)
-database/
-  init/              # *.sql files executed once on DB volume creation
-  migrations/        # Incremental migration files applied by scripts/migrate.sh
-scripts/
-  migrate.sh         # Migration runner
-src/                 # PHP application code
-public/              # Apache document root (index.php front controller)
-composer.json
+```bash
+cd ../rhm-database-infrastructure && docker compose down
 ```
 
-### API endpoints
+Para reiniciar desde cero, eliminando definitivamente ambas bases:
 
-| Method | Path                  | Success response               |
-|--------|-----------------------|-------------------------------|
-| POST   | `/departamentos`      | 201 Created — department body |
-| GET    | `/departamentos`      | 200 OK — array of departments |
-| GET    | `/departamentos/{id}` | 200 OK / 404 Not Found        |
+```bash
+cd ../rhm-database-infrastructure && docker compose down -v
+cd ../rhm-database-infrastructure && docker compose up --build
+```
 
-Department JSON shape: `{ "id": "string", "nombre": "string", "descripcion": "string" }`.
+## Endpoints
 
-### Patterns to follow
+### Departamentos (`http://localhost:8081`)
 
-- Route all HTTP requests through a single front controller (`public/index.php`).
-- Keep infrastructure concerns (DB connection, env loading) separate from domain logic and HTTP handlers.
-- Database schema is version-controlled: initial schema lives in `database/init/`, incremental changes go into `database/migrations/`.
-- The DB connection uses the service name `departamentos-db` as host (not `localhost`).
+| Método | Ruta | Resultado |
+|---|---|---|
+| `POST` | `/departamentos` | Crea un departamento (`201`) |
+| `GET` | `/departamentos` | Lista los departamentos (`200`) |
+| `GET` | `/departamentos/{id}` | Consulta uno (`200` o `404`) |
+| `GET` | `/health` | Estado del proceso |
+| `GET` | `/docs` | Swagger UI |
+| `GET` | `/openapi.json` | Documento OpenAPI 3.1 |
+
+Ejemplo:
+
+```bash
+curl -X POST http://localhost:8081/departamentos \
+  -H "Content-Type: application/json" \
+  -d '{"id":"IT","nombre":"Tecnología","descripcion":"Departamento de TI"}'
+```
+
+Todas las respuestas de negocio tienen el contrato común:
+
+```json
+{
+  "success": true,
+  "message": "Departamento registrado correctamente",
+  "data": {
+    "id": "IT",
+    "nombre": "Tecnología",
+    "descripcion": "Departamento de TI"
+  }
+}
+```
+
+### Empleados (`http://localhost:8080`)
+
+| Método | Ruta | Resultado |
+|---|---|---|
+| `POST` | `/empleados` | Crea un empleado (`201`) |
+| `GET` | `/empleados` | Lista los empleados (`200`) |
+| `GET` | `/empleados/{id}` | Consulta uno (`200` o `404`) |
+| `GET` | `/health` | Estado del proceso |
+| `GET` | `/docs` | Swagger UI |
+
+Al registrar, empleados valida en orden el email, el número de empleado y la existencia del
+departamento. La tercera validación se hace por HTTP contra `departamentos-service`; empleados
+nunca accede a la base MySQL.
+
+## Decisiones técnicas
+
+### Motor por servicio
+
+Se eligió PostgreSQL para empleados y MySQL para departamentos. Esto demuestra persistencia
+políglota y mantiene la autonomía de cada servicio. El beneficio es poder elegir la tecnología por
+contexto; el costo es operar, monitorear y respaldar dos motores diferentes.
+
+### Creación y evolución del esquema
+
+Departamentos usa `database/init/01_schema.sql`, montado en
+`/docker-entrypoint-initdb.d`. Es explícito y reproducible para este reto, pero solo se ejecuta al
+crear un volumen vacío. Un cambio posterior exige una migración incremental; no se debe borrar
+un volumen productivo para actualizar el esquema. Empleados conserva su ejecutor de migraciones
+versionadas al iniciar.
+
+### Unicidad
+
+Se realiza una consulta previa para entregar un mensaje claro y también se conservan restricciones
+`UNIQUE` en la base de empleados. La restricción es la garantía real ante dos peticiones
+concurrentes; el repositorio traduce la violación a una respuesta `400`.
+
+### Fallo del servicio de departamentos
+
+La llamada usa timeout de 2 segundos y hasta tres intentos con espera exponencial de 1 y 2
+segundos entre intentos. Si todos fallan, empleados rechaza el registro con `503 Service
+Unavailable`. No se guarda un empleado pendiente porque el modelo de este reto no define dicho
+estado y hacerlo permitiría referencias no validadas.
+
+## Arranque ordenado y persistencia
+
+Las bases tienen health checks nativos. Cada aplicación usa
+`depends_on: condition: service_healthy`; empleados espera además a que departamentos esté sano.
+Los reintentos siguen siendo necesarios porque el health check solo ordena el arranque y no cubre
+fallos posteriores.
+
+Comprobación:
+
+```bash
+cd ../rhm-database-infrastructure && docker compose ps
+cd ../rhm-database-infrastructure && docker compose down
+cd ../rhm-database-infrastructure && docker compose up -d
+curl http://localhost:8080/empleados/E001
+```
+
+Después de `down`, los datos deben seguir disponibles. Después de `down -v`, deben desaparecer.

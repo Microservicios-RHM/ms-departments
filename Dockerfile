@@ -34,6 +34,8 @@ RUN docker-php-ext-install pdo_mysql opcache \
 # Configuración de Apache y de PHP.
 COPY docker/php/vhost.conf /etc/apache2/sites-available/000-default.conf
 COPY docker/php/php.ini    /usr/local/etc/php/conf.d/zz-app.ini
+COPY docker/php/server-name.conf /etc/apache2/conf-available/server-name.conf
+RUN a2enconf server-name
 
 WORKDIR /var/www/html
 
@@ -47,4 +49,4 @@ RUN chown -R www-data:www-data /var/www/html
 EXPOSE 80
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \
-    CMD php -r "exit(@file_get_contents('http://localhost/salud') ? 0 : 1);"
+    CMD php -r "exit(@file_get_contents('http://localhost/health') ? 0 : 1);"
