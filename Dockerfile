@@ -28,7 +28,10 @@ LABEL org.opencontainers.image.title="servicio-departamentos" \
       org.opencontainers.image.vendor="Equipo de Desarrollo"
 
 # Extensiones de PHP necesarias para hablar con MySQL.
-RUN docker-php-ext-install pdo_mysql opcache \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libonig-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && docker-php-ext-install pdo_mysql mbstring opcache \
     && a2enmod rewrite headers
 
 # Configuración de Apache y de PHP.

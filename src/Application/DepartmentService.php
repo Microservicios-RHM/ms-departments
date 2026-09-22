@@ -58,7 +58,7 @@ final readonly class DepartmentService
         if ($value === '') {
             throw new ApiException(400, 'VALIDATION_ERROR', ResponseMessages::required($field));
         }
-        $length = function_exists('mb_strlen') ? mb_strlen($value) : strlen($value);
+        $length = mb_strlen($value, 'UTF-8');
         if ($length > $maxLength) {
             throw new ApiException(400, 'VALIDATION_ERROR', ResponseMessages::tooLong($field, $maxLength));
         }

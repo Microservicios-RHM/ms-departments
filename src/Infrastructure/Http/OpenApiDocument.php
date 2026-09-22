@@ -171,9 +171,9 @@ final class OpenApiDocument
                         'additionalProperties' => false,
                         'required' => ['id', 'nombre', 'descripcion'],
                         'properties' => [
-                            'id' => ['type' => 'string', 'example' => 'IT', 'maxLength' => 50],
-                            'nombre' => ['type' => 'string', 'example' => 'Tecnología', 'maxLength' => 100],
-                            'descripcion' => ['type' => 'string', 'example' => 'Departamento de TI', 'maxLength' => 1000],
+                            'id' => ['type' => 'string', 'example' => 'IT', 'minLength' => 1, 'maxLength' => 50],
+                            'nombre' => ['type' => 'string', 'example' => 'Tecnología', 'minLength' => 1, 'maxLength' => 100],
+                            'descripcion' => ['type' => 'string', 'example' => 'Departamento de TI', 'minLength' => 1, 'maxLength' => 1000],
                         ],
                     ],
                     'CreateDepartmentRequest' => ['$ref' => '#/components/schemas/Department'],
@@ -262,8 +262,8 @@ final class OpenApiDocument
         return <<<'HTML'
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Departamentos API</title><link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css"></head>
-<body><div id="swagger-ui"></div><script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+<title>Departamentos API</title><link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.20.0/swagger-ui.css" integrity="sha384-19U5QfIgtj822TyFqWtYKqauOZosmdEalgX8htxti5Pkm6oyuyR9ePwNbSaBclKA" crossorigin="anonymous"></head>
+<body><div id="swagger-ui"></div><script src="https://unpkg.com/swagger-ui-dist@5.20.0/swagger-ui-bundle.js" integrity="sha384-rRrR3nNb82g8SC01btWjsJrhqOHRPUgOSCfBFH+bVWms4P0+TpBiJv48okcp5Pu4" crossorigin="anonymous"></script>
 <script>SwaggerUIBundle({url: '/openapi.json', dom_id: '#swagger-ui'});</script></body></html>
 HTML;
     }

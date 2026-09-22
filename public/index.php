@@ -43,14 +43,14 @@ try {
         exit;
     }
 
-    $controller = new DepartmentController(
+    $controller = static fn (): DepartmentController => new DepartmentController(
         new DepartmentService(new MySqlDepartmentRepository(ConnectionFactory::create())),
     );
 
-    if ($method === 'POST' && $path === '/departamentos') $controller->create();
-    if ($method === 'GET' && $path === '/departamentos') $controller->findAll();
+    if ($method === 'POST' && $path === '/departamentos') $controller()->create();
+    if ($method === 'GET' && $path === '/departamentos') $controller()->findAll();
     if ($method === 'GET' && preg_match('#^/departamentos/([^/]+)$#', $path, $matches) === 1) {
-        $controller->findById(urldecode($matches[1]));
+        $controller()->findById(rawurldecode($matches[1]));
     }
 
     ApiResponse::error(404, ResponseMessages::RESOURCE_NOT_FOUND, 'RESOURCE_NOT_FOUND');
