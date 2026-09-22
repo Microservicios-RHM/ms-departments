@@ -1,61 +1,50 @@
-# Reto 2: empleados y departamentos
+# Microservicio de departamentos
 
-Orquestación del sistema de onboarding con dos microservicios independientes:
+Servicio HTTP para crear y consultar departamentos. Está construido con PHP 8.3, Apache y MySQL.
+Sus datos pertenecen exclusivamente a este servicio; otros microservicios los consultan mediante
+su API HTTP, nunca mediante acceso directo a MySQL.
 
-| Componente | Tecnología | Persistencia | Puerto host |
-|---|---|---|---:|
-| `empleados-service` | Node.js 24 + TypeScript | PostgreSQL 17 | 8080 |
-| `departamentos-service` | PHP 8.3 + Apache | MySQL 8.4 | 8081 |
-| `database-empleados` | PostgreSQL 17 | `rhm-employees-data` | 5433 |
-| `database-departamentos` | MySQL 8.4 | `rhm-departments-data` | 3307 |
+## Ejecución local
 
-Los repositorios `ms-departments` y `ms-employees` deben estar como carpetas hermanas de
-`rhm-database-infrastructure`. El único Compose del sistema está en esa carpeta. Ejecútelo allí:
+La plataforma se orquesta desde el repositorio hermano `rhm-database-infrastructure`. Allí se
+inician el contenedor de MySQL y este servicio:
 
 ```bash
 cd ../rhm-database-infrastructure
-cp .env.example .env
 docker compose up --build
 ```
 
-El archivo `.env` central es opcional porque Compose incluye valores de desarrollo seguros por defecto,
-pero permite personalizar puertos y credenciales sin modificar el YAML. No debe subirse a Git.
+El servicio queda disponible en `http://localhost:8081`.
 
-Para detener conservando los datos:
-
-```bash
-cd ../rhm-database-infrastructure && docker compose down
-```
-
-Para reiniciar desde cero, eliminando definitivamente ambas bases:
+Para ejecutar PHP fuera de Docker se requieren PHP 8.3 y Composer:
 
 ```bash
-cd ../rhm-database-infrastructure && docker compose down -v
-cd ../rhm-database-infrastructure && docker compose up --build
+composer install
 ```
 
-## Endpoints
+La configuración se toma de las variables `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`,
+`DB_PASSWORD` y `DB_CHARSET`. En Docker son suministradas por el Compose central.
 
-### Departamentos (`http://localhost:8081`)
+## API
 
 | Método | Ruta | Resultado |
 |---|---|---|
-| `POST` | `/departamentos` | Crea un departamento (`201`) |
-| `GET` | `/departamentos` | Lista los departamentos (`200`) |
-| `GET` | `/departamentos/{id}` | Consulta uno (`200` o `404`) |
-| `GET` | `/health` | Estado del proceso |
+| `POST` | `/departamentos` | Crea un departamento (`201 Created`) |
+| `GET` | `/departamentos` | Lista departamentos (`200 OK`) |
+| `GET` | `/departamentos/{id}` | Consulta un departamento (`200` o `404`) |
+| `GET` | `/health` | Confirma que el proceso está activo |
 | `GET` | `/docs` | Swagger UI |
-| `GET` | `/openapi.json` | Documento OpenAPI 3.1 |
+| `GET` | `/openapi.json` | Contrato OpenAPI 3.1 |
 
-Ejemplo:
+Ejemplo de creación:
 
 ```bash
-curl -X POST http://localhost:8081/departamentos \
+curl -i -X POST http://localhost:8081/departamentos \
   -H "Content-Type: application/json" \
   -d '{"id":"IT","nombre":"Tecnología","descripcion":"Departamento de TI"}'
 ```
 
-Todas las respuestas de negocio tienen el contrato común:
+Las respuestas de negocio usan el contrato común:
 
 ```json
 {
@@ -69,63 +58,34 @@ Todas las respuestas de negocio tienen el contrato común:
 }
 ```
 
-### Empleados (`http://localhost:8080`)
+Los errores incluyen `error.code`, `error.status`, `error.path` y `error.timestamp`. Los clientes
+deben usar `error.code`, no el texto de `message`, para tomar decisiones.
 
-| Método | Ruta | Resultado |
-|---|---|---|
-| `POST` | `/empleados` | Crea un empleado (`201`) |
-| `GET` | `/empleados` | Lista los empleados (`200`) |
-| `GET` | `/empleados/{id}` | Consulta uno (`200` o `404`) |
-| `GET` | `/health` | Estado del proceso |
-| `GET` | `/docs` | Swagger UI |
+## Persistencia y evolución del esquema
 
-Al registrar, empleados valida en orden el email, el número de empleado y la existencia del
-departamento. La tercera validación se hace por HTTP contra `departamentos-service`; empleados
-nunca accede a la base MySQL.
+El esquema inicial está versionado en `database/init/01_schema.sql`. MySQL lo ejecuta desde
+`/docker-entrypoint-initdb.d` únicamente cuando crea un volumen vacío. La tabla
+`departamentos` tiene `id` como clave primaria, por lo cual no admite identificadores repetidos.
 
-## Decisiones técnicas
+El script inicial no se debe modificar para actualizar una base que ya contiene datos. Cada cambio
+posterior debe incorporarse como una migración incremental y versionada, aplicable sin eliminar el
+volumen ni perder información existente.
 
-### Motor por servicio
+## Estructura
 
-Se eligió PostgreSQL para empleados y MySQL para departamentos. Esto demuestra persistencia
-políglota y mantiene la autonomía de cada servicio. El beneficio es poder elegir la tecnología por
-contexto; el costo es operar, monitorear y respaldar dos motores diferentes.
-
-### Creación y evolución del esquema
-
-Departamentos usa `database/init/01_schema.sql`, montado en
-`/docker-entrypoint-initdb.d`. Es explícito y reproducible para este reto, pero solo se ejecuta al
-crear un volumen vacío. Un cambio posterior exige una migración incremental; no se debe borrar
-un volumen productivo para actualizar el esquema. Empleados conserva su ejecutor de migraciones
-versionadas al iniciar.
-
-### Unicidad
-
-Se realiza una consulta previa para entregar un mensaje claro y también se conservan restricciones
-`UNIQUE` en la base de empleados. La restricción es la garantía real ante dos peticiones
-concurrentes; el repositorio traduce la violación a una respuesta `400`.
-
-### Fallo del servicio de departamentos
-
-La llamada usa timeout de 2 segundos y hasta tres intentos con espera exponencial de 1 y 2
-segundos entre intentos. Si todos fallan, empleados rechaza el registro con `503 Service
-Unavailable`. No se guarda un empleado pendiente porque el modelo de este reto no define dicho
-estado y hacerlo permitiría referencias no validadas.
-
-## Arranque ordenado y persistencia
-
-Las bases tienen health checks nativos. Cada aplicación usa
-`depends_on: condition: service_healthy`; empleados espera además a que departamentos esté sano.
-Los reintentos siguen siendo necesarios porque el health check solo ordena el arranque y no cubre
-fallos posteriores.
-
-Comprobación:
-
-```bash
-cd ../rhm-database-infrastructure && docker compose ps
-cd ../rhm-database-infrastructure && docker compose down
-cd ../rhm-database-infrastructure && docker compose up -d
-curl http://localhost:8080/empleados/E001
+```text
+src/
+├── Domain/          Entidad y contrato del repositorio
+├── Application/     Caso de uso y reglas de negocio
+├── Infrastructure/  MySQL, HTTP y documento OpenAPI
+└── Shared/          Excepciones y mensajes reutilizables
 ```
 
-Después de `down`, los datos deben seguir disponibles. Después de `down -v`, deben desaparecer.
+La capa de aplicación depende de `DepartmentRepository`; la implementación `MySqlDepartmentRepository`
+queda en infraestructura. Esto evita que las reglas de negocio dependan de PDO o de detalles de MySQL.
+
+## Docker
+
+Este repositorio contiene el `Dockerfile` de la imagen de Departamentos, pero no un Compose propio.
+El único Compose autorizado está en `../rhm-database-infrastructure`, donde se definen la red,
+el volumen, las credenciales y el orden de arranque de toda la plataforma.
