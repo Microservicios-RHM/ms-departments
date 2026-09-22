@@ -1,0 +1,73 @@
+# =============================================================================
+#  Servicio de Departamentos — orquestación base
+#  Se levanta de forma totalmente independiente del servicio de empleados:
+#  su propia red, su propio puerto, su propia base de datos y su propio volumen.
+# =============================================================================
+
+name: departamentos
+
+services:
+
+  # ---------------------------------------------------------------- API PHP --
+  departamentos-api:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    image: servicio-departamentos:1.0.0
+    container_name: departamentos-api
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV}
+      # El host es el NOMBRE DEL SERVICIO de compose, no localhost.
+      DB_HOST: departamentos-db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_CHARSET: utf8mb4
+    ports:
+      - "${APP_PORT}:80"
+    depends_on:
+      departamentos-db:
+        condition: service_healthy
+    networks:
+      - departamentos-red
+
+  # ----------------------------------------------------------- Base de datos --
+  departamentos-db:
+    image: mysql:8.4
+    container_name: departamentos-db
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      # Puerto propio del host para inspeccionar la BD con DBeaver/Workbench.
+      - "${DB_PORT_HOST}:3306"
+    volumes:
+      # Volumen nombrado: los datos sobreviven a docker compose down.
+      - departamentos-datos:/var/lib/mysql
+      # Scripts compartidos por el equipo: se ejecutan al crear el volumen.
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - departamentos-red
+
+# --------------------------------------------------------------- Volúmenes --
+volumes:
+  departamentos-datos:
+    name: departamentos-datos
+
+# ------------------------------------------------------------------- Redes --
+networks:
+  departamentos-red:
+    name: departamentos-red
+    driver: bridge
