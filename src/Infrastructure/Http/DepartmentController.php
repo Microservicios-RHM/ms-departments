@@ -40,6 +40,12 @@ final readonly class DepartmentController
         if (!is_array($input)) {
             throw new ApiException(400, 'VALIDATION_ERROR', 'El cuerpo debe ser un objeto JSON');
         }
-        ApiResponse::success(201, ResponseMessages::DEPARTMENT_CREATED, $this->service->create($input));
+        $department = $this->service->create($input);
+        ApiResponse::success(
+            201,
+            ResponseMessages::DEPARTMENT_CREATED,
+            $department,
+            ['Location' => '/departamentos/' . rawurlencode($department['id'])],
+        );
     }
 }

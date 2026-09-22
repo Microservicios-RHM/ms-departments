@@ -83,6 +83,12 @@ final class OpenApiDocument
                         'responses' => [
                             '201' => [
                                 'description' => ResponseMessages::DEPARTMENT_CREATED,
+                                'headers' => [
+                                    'Location' => [
+                                        'description' => 'URI relativa del departamento creado.',
+                                        'schema' => ['type' => 'string', 'example' => '/departamentos/IT'],
+                                    ],
+                                ],
                                 'content' => ['application/json' => [
                                     'schema' => ['$ref' => '#/components/schemas/DepartmentResponse'],
                                     'example' => [
@@ -100,7 +106,12 @@ final class OpenApiDocument
                                         'success' => false,
                                         'message' => ResponseMessages::duplicateDepartment('IT'),
                                         'data' => null,
-                                        'error' => ['code' => 'DUPLICATE_DEPARTMENT_ID'],
+                                        'error' => [
+                                            'code' => 'DUPLICATE_DEPARTMENT_ID',
+                                            'status' => 400,
+                                            'path' => '/departamentos',
+                                            'timestamp' => '2026-02-10T12:00:00Z',
+                                        ],
                                     ],
                                 ]],
                             ],
@@ -140,7 +151,12 @@ final class OpenApiDocument
                                     'success' => false,
                                     'message' => ResponseMessages::departmentNotFound('NO-EXISTE'),
                                     'data' => null,
-                                    'error' => ['code' => 'DEPARTMENT_NOT_FOUND'],
+                                    'error' => [
+                                        'code' => 'DEPARTMENT_NOT_FOUND',
+                                        'status' => 404,
+                                        'path' => '/departamentos/NO-EXISTE',
+                                        'timestamp' => '2026-02-10T12:00:00Z',
+                                    ],
                                 ],
                             ]],
                         ],
@@ -207,8 +223,13 @@ final class OpenApiDocument
                             'error' => [
                                 'type' => 'object',
                                 'additionalProperties' => false,
-                                'required' => ['code'],
-                                'properties' => ['code' => ['type' => 'string']],
+                                'required' => ['code', 'status', 'path', 'timestamp'],
+                                'properties' => [
+                                    'code' => ['type' => 'string'],
+                                    'status' => ['type' => 'integer', 'example' => 400],
+                                    'path' => ['type' => 'string', 'example' => '/departamentos'],
+                                    'timestamp' => ['type' => 'string', 'format' => 'date-time'],
+                                ],
                             ],
                         ],
                     ],
@@ -222,7 +243,12 @@ final class OpenApiDocument
                                 'success' => false,
                                 'message' => ResponseMessages::INTERNAL_ERROR,
                                 'data' => null,
-                                'error' => ['code' => 'INTERNAL_ERROR'],
+                                'error' => [
+                                    'code' => 'INTERNAL_ERROR',
+                                    'status' => 500,
+                                    'path' => '/departamentos',
+                                    'timestamp' => '2026-02-10T12:00:00Z',
+                                ],
                             ],
                         ]],
                     ],
