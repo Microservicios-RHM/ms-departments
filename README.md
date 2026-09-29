@@ -14,7 +14,8 @@ cd ../rhm-database-infrastructure
 docker compose up --build
 ```
 
-El servicio queda disponible en `http://localhost:8081`.
+La URL pública es `http://localhost:8080/departamentos`; el API Gateway enruta la solicitud al
+puerto interno de este servicio.
 
 Para ejecutar PHP fuera de Docker se requieren PHP 8.3 y Composer:
 
@@ -39,7 +40,7 @@ La configuración se toma de las variables `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_
 Ejemplo de creación:
 
 ```bash
-curl -i -X POST http://localhost:8081/departamentos \
+curl -i -X POST http://localhost:8080/departamentos \
   -H "Content-Type: application/json" \
   -d '{"id":"IT","nombre":"Tecnología","descripcion":"Departamento de TI"}'
 ```
