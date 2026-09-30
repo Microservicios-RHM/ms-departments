@@ -264,7 +264,7 @@ final class OpenApiDocument
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Departamentos API</title><link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.20.0/swagger-ui.css" integrity="sha384-19U5QfIgtj822TyFqWtYKqauOZosmdEalgX8htxti5Pkm6oyuyR9ePwNbSaBclKA" crossorigin="anonymous"></head>
 <body><div id="swagger-ui"></div><script src="https://unpkg.com/swagger-ui-dist@5.20.0/swagger-ui-bundle.js" integrity="sha384-rRrR3nNb82g8SC01btWjsJrhqOHRPUgOSCfBFH+bVWms4P0+TpBiJv48okcp5Pu4" crossorigin="anonymous"></script>
-<script>SwaggerUIBundle({url: '/openapi.json', dom_id: '#swagger-ui'});</script></body></html>
+<script>SwaggerUIBundle({url: '/departamentos/openapi.json', dom_id: '#swagger-ui'});</script></body></html>
 HTML;
     }
 }
