@@ -32,12 +32,16 @@ try {
     if ($method === 'GET' && $path === '/health') {
         ApiResponse::success(200, ResponseMessages::SERVICE_AVAILABLE, ['status' => 'UP']);
     }
-    if ($method === 'GET' && $path === '/openapi.json') {
+    // Montadas bajo /departamentos (no en la raíz) para poder vivir detrás del API Gateway sin
+    // reescritura de rutas: el Gateway ya proxea /departamentos/* preservando la ruta. Se
+    // resuelven antes que la regex de /departamentos/{id}, así que "docs" nunca se interpreta
+    // como un id de departamento.
+    if ($method === 'GET' && $path === '/departamentos/openapi.json') {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(OpenApiDocument::get(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }
-    if ($method === 'GET' && ($path === '/docs' || $path === '/docs/')) {
+    if ($method === 'GET' && ($path === '/departamentos/docs' || $path === '/departamentos/docs/')) {
         header('Content-Type: text/html; charset=utf-8');
         echo OpenApiDocument::swaggerUi();
         exit;

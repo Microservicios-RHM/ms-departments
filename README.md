@@ -34,8 +34,12 @@ La configuración se toma de las variables `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_
 | `GET` | `/departamentos` | Lista departamentos (`200 OK`) |
 | `GET` | `/departamentos/{id}` | Consulta un departamento (`200` o `404`) |
 | `GET` | `/health` | Confirma que el proceso está activo |
-| `GET` | `/docs` | Swagger UI |
-| `GET` | `/openapi.json` | Contrato OpenAPI 3.1 |
+| `GET` | `/departamentos/docs` | Swagger UI |
+| `GET` | `/departamentos/openapi.json` | Contrato OpenAPI 3.1 |
+
+Montadas bajo `/departamentos` (no en la raíz) para poder vivir detrás del API Gateway sin
+reescritura de rutas: el Gateway ya proxea `/departamentos/*` preservando la ruta, así que quedan
+alcanzables en `http://localhost:8080/departamentos/docs` sin ningún cambio en `api-gateway`.
 
 Ejemplo de creación:
 
