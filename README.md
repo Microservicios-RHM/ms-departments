@@ -66,6 +66,17 @@ Las respuestas de negocio usan el contrato común:
 Los errores incluyen `error.code`, `error.status`, `error.path` y `error.timestamp`. Los clientes
 deben usar `error.code`, no el texto de `message`, para tomar decisiones.
 
+### Autenticación en Swagger (Reto 5)
+
+Desde el Reto 5 todas las peticiones exigen un token, que valida el API Gateway. El documento
+OpenAPI declara el esquema de seguridad `BearerAuth`, así que la página de Swagger muestra el
+botón **Authorize**: se pega ahí el `accessToken` que devuelve `POST /auth/login` y el token viaja
+en cada petición de prueba.
+
+Es solo documentación. Este servicio no verifica la firma — de eso se encarga el Gateway, una sola
+vez para todo el ecosistema. Sin esta declaración el botón no existiría y cualquier "Try it out"
+respondería `401` sin forma de autenticarse.
+
 ## Persistencia y evolución del esquema
 
 El esquema inicial está versionado en `database/init/01_schema.sql`. MySQL lo ejecuta desde
