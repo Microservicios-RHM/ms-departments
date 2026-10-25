@@ -25,6 +25,7 @@ final class OpenApiDocument
                 'description' => 'API independiente para registrar y consultar departamentos.',
             ],
             'servers' => [['url' => '/', 'description' => 'Servidor actual']],
+            'security' => [['BearerAuth' => []]],
             'tags' => [
                 ['name' => 'Health', 'description' => 'Estado operativo del microservicio'],
                 ['name' => 'Departamentos', 'description' => 'Registro y consulta de departamentos'],
@@ -165,6 +166,14 @@ final class OpenApiDocument
                 ]],
             ],
             'components' => [
+                'securitySchemes' => [
+                    'BearerAuth' => [
+                        'type' => 'http',
+                        'scheme' => 'bearer',
+                        'bearerFormat' => 'JWT',
+                        'description' => 'Token obtenido en POST /auth/login a través del API Gateway. Pulse Authorize y pegue el valor de accessToken.',
+                    ],
+                ],
                 'schemas' => [
                     'Department' => [
                         'type' => 'object',
