@@ -30,6 +30,9 @@ final class ConnectionFactory
     private static function environment(string $name, ?string $default = null): string
     {
         $value = getenv($name);
+        if (($value === false || trim($value) === '') && ($file = getenv("{$name}_FILE")) !== false && trim($file) !== '') {
+            $value = trim((string) file_get_contents($file));
+        }
         if ($value === false || trim($value) === '') {
             if ($default !== null) return $default;
             throw new \RuntimeException("Falta la variable de entorno {$name}");
