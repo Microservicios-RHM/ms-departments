@@ -37,7 +37,18 @@ try {
         exit;
     }
     if ($method === 'GET' && $path === '/health') {
-        ApiResponse::success(200, ResponseMessages::SERVICE_AVAILABLE, ['status' => 'UP']);
+        $checks = ['database' => 'DOWN'];
+        try {
+            ConnectionFactory::create()->query('SELECT 1');
+            $checks['database'] = 'UP';
+        } catch (Throwable) {
+            // El contrato de health comunica la dependencia caÃ­da sin exponer su detalle interno.
+        }
+        $status = $checks['database'] === 'UP' ? 'UP' : 'DOWN';
+        http_response_code($status === 'UP' ? 200 : 503);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['status' => $status, 'service' => 'departamentos-service', 'checks' => $checks]);
+        exit;
     }
     // Montadas bajo /departamentos (no en la raíz) para poder vivir detrás del API Gateway sin
     // reescritura de rutas: el Gateway ya proxea /departamentos/* preservando la ruta. Se
