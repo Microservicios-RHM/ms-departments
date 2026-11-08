@@ -16,15 +16,25 @@ use App\Shared\ResponseMessages;
 $startedAt = microtime(true);
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+$traceparent = $_SERVER['HTTP_TRACEPARENT'] ?? '';
+$traceId = preg_match('/^[\da-f]{2}-([\da-f]{32})-[\da-f]{16}-[\da-f]{2}$/i', $traceparent, $traceMatch) === 1
+    ? strtolower($traceMatch[1]) : bin2hex(random_bytes(16));
+$requestCount = 0;
+$errorCount = 0;
+$requestCount++;
 
 register_shutdown_function(static function () use ($startedAt, $method, $path): void {
     error_log(json_encode([
-        'level' => 'info',
+        'timestamp' => gmdate('c'),
+        'level' => http_response_code() >= 400 ? 'error' : 'info',
+        'service' => 'departamentos-service',
+        'message' => 'HTTP request completed',
+        'context' => ['method' => $method, 'path' => $path, 'status' => http_response_code()],
+        'traceId' => $traceId,
         'method' => $method,
         'path' => $path,
         'status' => http_response_code(),
         'durationMs' => round((microtime(true) - $startedAt) * 1000, 2),
-        'message' => 'HTTP request completed',
     ], JSON_UNESCAPED_SLASHES));
 });
 
@@ -34,6 +44,10 @@ try {
         echo "# HELP rhm_departments_service_info Static service identity metric\n";
         echo "# TYPE rhm_departments_service_info gauge\n";
         echo "rhm_departments_service_info{service=\"departamentos-service\"} 1\n";
+        echo "# TYPE rhm_departments_http_requests_total counter\n";
+        echo "rhm_departments_http_requests_total {$requestCount}\n";
+        echo "# TYPE rhm_departments_http_errors_total counter\n";
+        echo "rhm_departments_http_errors_total {$errorCount}\n";
         exit;
     }
     if ($method === 'GET' && $path === '/health') {
