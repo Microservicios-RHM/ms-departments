@@ -34,6 +34,10 @@ RUN apt-get update \
     && docker-php-ext-install pdo_mysql mbstring opcache \
     && a2enmod rewrite headers
 
+# Los directorios de ejecución quedan bajo control de www-data antes de abandonar root.
+RUN install -d -o www-data -g www-data /var/run/apache2 /var/lock/apache2 \
+    && chown -R www-data:www-data /var/log/apache2
+
 # Configuración de Apache y de PHP.
 COPY docker/php/vhost.conf /etc/apache2/sites-available/000-default.conf
 COPY docker/php/php.ini    /usr/local/etc/php/conf.d/zz-app.ini
@@ -48,6 +52,8 @@ COPY . .
 
 # La aplicación corre como www-data, no como root.
 RUN chown -R www-data:www-data /var/www/html
+
+USER www-data
 
 EXPOSE 80
 
