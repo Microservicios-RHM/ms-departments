@@ -5,7 +5,11 @@ pipeline {
   environment { SERVICE = 'ms-departments'; IMAGE = 'rhm/ms-departments' }
   stages {
     stage('Checkout') { steps { checkout scm; script { env.IMAGE_TAG = "${env.BUILD_NUMBER}-${sh(script: 'git rev-parse --short=7 HEAD', returnStdout: true).trim()}" } } }
-    stage('Build and test') {
+    stage('Build') {
+      agent { docker { image 'composer:2'; reuseNode true } }
+      steps { sh 'composer install --no-interaction --prefer-dist'; sh 'find src -name "*.php" -print0 | xargs -0 -n1 php -l' }
+    }
+    stage('Test') {
       agent { docker { image 'composer:2'; reuseNode true } }
       steps { sh 'composer install --no-interaction --prefer-dist'; sh 'composer test' }
     }
