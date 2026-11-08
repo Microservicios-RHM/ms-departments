@@ -29,6 +29,13 @@ register_shutdown_function(static function () use ($startedAt, $method, $path): 
 });
 
 try {
+    if ($method === 'GET' && $path === '/metrics') {
+        header('Content-Type: text/plain; version=0.0.4; charset=utf-8');
+        echo "# HELP rhm_departments_service_info Static service identity metric\n";
+        echo "# TYPE rhm_departments_service_info gauge\n";
+        echo "rhm_departments_service_info{service=\"departamentos-service\"} 1\n";
+        exit;
+    }
     if ($method === 'GET' && $path === '/health') {
         ApiResponse::success(200, ResponseMessages::SERVICE_AVAILABLE, ['status' => 'UP']);
     }
