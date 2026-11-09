@@ -10,6 +10,8 @@ use App\Infrastructure\Http\ApiResponse;
 use App\Infrastructure\Http\DepartmentController;
 use App\Infrastructure\Http\OpenApiDocument;
 use App\Infrastructure\Persistence\MySqlDepartmentRepository;
+use App\Infrastructure\Observability\Metrics;
+use App\Infrastructure\Observability\Telemetry;
 use App\Shared\ApiException;
 use App\Shared\ResponseMessages;
 
@@ -19,35 +21,33 @@ $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $traceparent = $_SERVER['HTTP_TRACEPARENT'] ?? '';
 $traceId = preg_match('/^[\da-f]{2}-([\da-f]{32})-[\da-f]{16}-[\da-f]{2}$/i', $traceparent, $traceMatch) === 1
     ? strtolower($traceMatch[1]) : bin2hex(random_bytes(16));
-$requestCount = 0;
-$errorCount = 0;
-$requestCount++;
-
-register_shutdown_function(static function () use ($startedAt, $method, $path): void {
-    error_log(json_encode([
+[$span, $scope] = Telemetry::startHttpSpan($method, $path, ['traceparent' => $traceparent]);
+$traceId = $span->getContext()->getTraceId();
+register_shutdown_function(static function () use ($startedAt, $method, $path, $traceId): void {
+    $status = http_response_code();
+    $duration = microtime(true) - $startedAt;
+    if ($path !== '/metrics') Metrics::observeHttp($method, $status, $duration);
+    file_put_contents('php://stdout', json_encode([
         'timestamp' => gmdate('c'),
-        'level' => http_response_code() >= 400 ? 'error' : 'info',
+        'level' => $status >= 400 ? 'error' : 'info',
         'service' => 'departamentos-service',
         'message' => 'HTTP request completed',
-        'context' => ['method' => $method, 'path' => $path, 'status' => http_response_code()],
+        'context' => ['method' => $method, 'path' => $path, 'status' => $status, 'durationMs' => round($duration * 1000, 2)],
         'traceId' => $traceId,
         'method' => $method,
         'path' => $path,
-        'status' => http_response_code(),
-        'durationMs' => round((microtime(true) - $startedAt) * 1000, 2),
-    ], JSON_UNESCAPED_SLASHES));
+    ], JSON_UNESCAPED_SLASHES) . PHP_EOL);
+});
+register_shutdown_function(static function () use ($span, $scope): void {
+    $span->setAttribute('http.response.status_code', http_response_code());
+    $scope->detach();
+    $span->end();
 });
 
 try {
     if ($method === 'GET' && $path === '/metrics') {
         header('Content-Type: text/plain; version=0.0.4; charset=utf-8');
-        echo "# HELP rhm_departments_service_info Static service identity metric\n";
-        echo "# TYPE rhm_departments_service_info gauge\n";
-        echo "rhm_departments_service_info{service=\"departamentos-service\"} 1\n";
-        echo "# TYPE rhm_departments_http_requests_total counter\n";
-        echo "rhm_departments_http_requests_total {$requestCount}\n";
-        echo "# TYPE rhm_departments_http_errors_total counter\n";
-        echo "rhm_departments_http_errors_total {$errorCount}\n";
+        echo Metrics::render();
         exit;
     }
     if ($method === 'GET' && $path === '/health') {
@@ -93,10 +93,13 @@ try {
 } catch (ApiException $exception) {
     ApiResponse::error($exception->status, $exception->getMessage(), $exception->errorCode);
 } catch (Throwable $exception) {
-    error_log(json_encode([
+    file_put_contents('php://stdout', json_encode([
+        'timestamp' => gmdate('c'),
         'level' => 'error',
-        'exception' => $exception::class,
-        'message' => $exception->getMessage(),
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        'service' => 'departamentos-service',
+        'message' => 'Unhandled error',
+        'context' => ['exception' => $exception::class],
+        'traceId' => $traceId,
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL);
     ApiResponse::error(500, ResponseMessages::INTERNAL_ERROR, 'INTERNAL_ERROR');
 }
