@@ -9,7 +9,7 @@ pipeline {
     IMAGE = 'rhm/ms-departments'
   }
   stages {
-    stage('Checkout') { steps { checkout scm; script { env.IMAGE_TAG = "${env.BUILD_NUMBER}-${sh(script: 'git rev-parse --short=7 HEAD', returnStdout: true).trim()}" } } }
+    stage('Checkout') { steps { deleteDir(); checkout scm; script { env.IMAGE_TAG = "${env.BUILD_NUMBER}-${sh(script: 'git rev-parse --short=7 HEAD', returnStdout: true).trim()}" } } }
     stage('Secret scan') { steps { sh 'docker run --rm --volumes-from "$HOSTNAME" zricethezav/gitleaks:v8.24.0 detect --source "$PWD" --no-git --redact' } }
     stage('Build') {
       agent { dockerfile { filename 'ci/php-ci.Dockerfile'; reuseNode true } }
