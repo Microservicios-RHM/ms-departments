@@ -21,7 +21,7 @@ RUN composer install \
         --optimize-autoloader
 
 # ---------- Etapa 2: imagen de ejecución ------------------------------------
-FROM php:8.3-apache AS runtime
+FROM php:8.3-apache-trixie AS runtime
 
 LABEL org.opencontainers.image.title="servicio-departamentos" \
       org.opencontainers.image.description="Microservicio de gestión de departamentos" \
