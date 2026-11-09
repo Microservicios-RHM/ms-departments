@@ -7,4 +7,8 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 RUN apk add --no-cache $PHPIZE_DEPS linux-headers \
     && pecl install xdebug \
     && docker-php-ext-enable xdebug \
-    && apk del $PHPIZE_DEPS linux-headers
+    && apk del $PHPIZE_DEPS linux-headers \
+    && addgroup -S ci \
+    && adduser -S -G ci -h /home/ci ci
+
+USER ci

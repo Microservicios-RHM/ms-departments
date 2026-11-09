@@ -23,7 +23,7 @@ final class Telemetry
     public static function tracer(): TracerInterface
     {
         if (self::$provider === null) {
-            $endpoint = getenv('OTEL_EXPORTER_OTLP_TRACES_ENDPOINT') ?: 'http://jaeger:4318/v1/traces';
+            $endpoint = getenv('OTEL_EXPORTER_OTLP_TRACES_ENDPOINT') ?: 'https://jaeger:4318/v1/traces';
             $transport = (new OtlpHttpTransportFactory())->create($endpoint, 'application/x-protobuf');
             $resource = ResourceInfo::create(Attributes::create([ResourceAttributes::SERVICE_NAME => 'departamentos-service']));
             self::$provider = new TracerProvider(new SimpleSpanProcessor(new SpanExporter($transport)), resource: $resource);
