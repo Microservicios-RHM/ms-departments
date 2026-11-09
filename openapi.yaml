@@ -1,0 +1,525 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Microservicio de departamentos",
+    "version": "1.0.0",
+    "description": "API independiente para registrar y consultar departamentos."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Servidor actual"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Estado operativo del microservicio"
+    },
+    {
+      "name": "Departamentos",
+      "description": "Registro y consulta de departamentos"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Consultar el estado del servicio",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "Servicio disponible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Servicio disponible",
+                  "data": {
+                    "status": "UP"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        }
+      }
+    },
+    "/departamentos": {
+      "get": {
+        "tags": [
+          "Departamentos"
+        ],
+        "summary": "Listar todos los departamentos",
+        "operationId": "listDepartments",
+        "responses": {
+          "200": {
+            "description": "Departamentos consultados correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentListResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Departamentos consultados correctamente",
+                  "data": [
+                    {
+                      "id": "IT",
+                      "nombre": "Tecnología",
+                      "descripcion": "Departamento de TI"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Departamentos"
+        ],
+        "summary": "Registrar un departamento",
+        "description": "El identificador del departamento debe ser único.",
+        "operationId": "createDepartment",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDepartmentRequest"
+              },
+              "example": {
+                "id": "IT",
+                "nombre": "Tecnología",
+                "descripcion": "Departamento de TI"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Departamento registrado correctamente",
+            "headers": {
+              "Location": {
+                "description": "URI relativa del departamento creado.",
+                "schema": {
+                  "type": "string",
+                  "example": "/departamentos/IT"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Departamento registrado correctamente",
+                  "data": {
+                    "id": "IT",
+                    "nombre": "Tecnología",
+                    "descripcion": "Departamento de TI"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Cuerpo JSON inválido, campos inválidos o identificador duplicado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "El departamento con id IT ya existe",
+                  "data": null,
+                  "error": {
+                    "code": "DUPLICATE_DEPARTMENT_ID",
+                    "status": 400,
+                    "path": "/departamentos",
+                    "timestamp": "2026-02-10T12:00:00Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        }
+      }
+    },
+    "/departamentos/{id}": {
+      "get": {
+        "tags": [
+          "Departamentos"
+        ],
+        "summary": "Consultar un departamento por identificador",
+        "operationId": "getDepartmentById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Identificador único del departamento.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 50
+            },
+            "example": "IT"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Departamento consultado correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Departamento consultado correctamente",
+                  "data": {
+                    "id": "IT",
+                    "nombre": "Tecnología",
+                    "descripcion": "Departamento de TI"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "description": "El departamento solicitado no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "El departamento con id NO-EXISTE no existe",
+                  "data": null,
+                  "error": {
+                    "code": "DEPARTMENT_NOT_FOUND",
+                    "status": 404,
+                    "path": "/departamentos/NO-EXISTE",
+                    "timestamp": "2026-02-10T12:00:00Z"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Token obtenido en POST /auth/login a través del API Gateway. Pulse Authorize y pegue el valor de accessToken."
+      }
+    },
+    "schemas": {
+      "Department": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "nombre",
+          "descripcion"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "IT",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "nombre": {
+            "type": "string",
+            "example": "Tecnología",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "descripcion": {
+            "type": "string",
+            "example": "Departamento de TI",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        }
+      },
+      "CreateDepartmentRequest": {
+        "$ref": "#/components/schemas/Department"
+      },
+      "HealthResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "UP"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "DepartmentResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Department"
+          }
+        }
+      },
+      "DepartmentListResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Department"
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "success",
+          "message",
+          "data",
+          "error"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": false
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "null"
+          },
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "status",
+              "path",
+              "timestamp"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "status": {
+                "type": "integer",
+                "example": 400
+              },
+              "path": {
+                "type": "string",
+                "example": "/departamentos"
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "InternalServerError": {
+        "description": "Error no controlado en el servidor.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "message": "Error interno del servidor",
+              "data": null,
+              "error": {
+                "code": "INTERNAL_ERROR",
+                "status": 500,
+                "path": "/departamentos",
+                "timestamp": "2026-02-10T12:00:00Z"
+              }
+            }
+          }
+        }
+      },
+      "Error400": {
+        "description": "Solicitud inválida o regla de validación incumplida.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error401": {
+        "description": "Token ausente, inválido o credenciales incorrectas.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error403": {
+        "description": "El usuario autenticado no tiene permiso para realizar la operación.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error404": {
+        "description": "El recurso solicitado no existe.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error409": {
+        "description": "La operación entra en conflicto con el estado actual del recurso.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Error503": {
+        "description": "El servicio o una dependencia crítica no está disponible.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    }
+  },
+  "x-versioned-snapshot": "Contrato versionado; mantener sincronizado con el endpoint OpenAPI del servicio."
+}
+

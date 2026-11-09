@@ -1,4 +1,6 @@
 .env
 /vendor/
 /.phpunit.cache/
+/.phpunit.result.cache
+/reports/
 

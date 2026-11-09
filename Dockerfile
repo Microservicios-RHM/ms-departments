@@ -21,7 +21,7 @@ RUN composer install \
         --optimize-autoloader
 
 # ---------- Etapa 2: imagen de ejecución ------------------------------------
-FROM php:8.3-apache AS runtime
+FROM php:8.3-apache-trixie AS runtime
 
 LABEL org.opencontainers.image.title="servicio-departamentos" \
       org.opencontainers.image.description="Microservicio de gestión de departamentos" \
@@ -33,6 +33,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && docker-php-ext-install pdo_mysql mbstring opcache \
     && a2enmod rewrite headers
+
+# Los directorios de ejecución quedan bajo control de www-data antes de abandonar root.
+RUN install -d -o www-data -g www-data /var/run/apache2 /var/lock/apache2 \
+    && chown -R www-data:www-data /var/log/apache2
 
 # Configuración de Apache y de PHP.
 COPY docker/php/vhost.conf /etc/apache2/sites-available/000-default.conf
@@ -48,6 +52,8 @@ COPY . .
 
 # La aplicación corre como www-data, no como root.
 RUN chown -R www-data:www-data /var/www/html
+
+USER www-data
 
 EXPOSE 80
 
