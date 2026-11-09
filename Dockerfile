@@ -27,11 +27,14 @@ LABEL org.opencontainers.image.title="servicio-departamentos" \
       org.opencontainers.image.description="Microservicio de gestión de departamentos" \
       org.opencontainers.image.vendor="Equipo de Desarrollo"
 
-# Extensiones de PHP necesarias para hablar con MySQL.
+# Extensiones de PHP necesarias para hablar con MySQL, y APCu (Reto 8): memoria compartida entre
+# los workers de Apache donde viven los contadores de Prometheus.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libonig-dev \
     && rm -rf /var/lib/apt/lists/* \
     && docker-php-ext-install pdo_mysql mbstring opcache \
+    && pecl install apcu \
+    && docker-php-ext-enable apcu \
     && a2enmod rewrite headers
 
 # Configuración de Apache y de PHP.
