@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Database;
 
+use App\Infrastructure\Observability\TracedPdo;
 use PDO;
 
 final class ConnectionFactory
@@ -15,7 +16,8 @@ final class ConnectionFactory
         $database = self::environment('DB_NAME');
         $charset = self::environment('DB_CHARSET', 'utf8mb4');
 
-        return new PDO(
+        // Reto 8: TracedPdo crea un span por cada consulta a MySQL (ver Observability/TracedPdo.php).
+        return new TracedPdo(
             "mysql:host={$host};port={$port};dbname={$database};charset={$charset}",
             self::environment('DB_USER'),
             self::environment('DB_PASSWORD'),

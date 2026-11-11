@@ -105,3 +105,16 @@ queda en infraestructura. Esto evita que las reglas de negocio dependan de PDO o
 Este repositorio contiene el `Dockerfile` de la imagen de Departamentos, pero no un Compose propio.
 El único Compose autorizado está en `../rhm-database-infrastructure`, donde se definen la red,
 el volumen, las credenciales y el orden de arranque de toda la plataforma.
+
+## Observabilidad (Reto 8)
+
+Instrumentación de `departamentos-service` para el stack de observabilidad del ecosistema (Prometheus,
+Loki, Zipkin y Grafana). Arquitectura, dashboard, alertas y pruebas de caos en el
+[README de infraestructura](https://github.com/Microservicios-RHM/rhm-database-infrastructure#observabilidad-y-monitoreo-reto-8).
+
+| Pilar | Implementación |
+|---|---|
+| Métricas | `promphp/prometheus_client_php` — `GET /metrics`. Los contadores viven en **APCu** (memoria compartida entre los workers de Apache; extensión instalada con `pecl` en el Dockerfile) y CPU/memoria se leen del cgroup del contenedor ([Metrics.php](src/Infrastructure/Observability/Metrics.php)). Métricas comunes a los 7 servicios: `http_requests_total{method,route,status}`, `http_request_duration_seconds{method,route,status}`, `process_cpu_seconds_total`, `process_resident_memory_bytes`. |
+| Health | `GET /health` verifica MySQL (`SELECT 1`). No usa el broker, así que es su único check. Formato `{"status":"UP","service":"departamentos-service","checks":{...}}`, 200 si todo está UP y 503 si algo está DOWN. |
+| Trazas | `open-telemetry/sdk` + `open-telemetry/exporter-zipkin` (Guzzle como cliente HTTP). Sin instrumentación automática en PHP: `public/index.php` extrae el `traceparent`, abre el span de servidor y lo cierra en el shutdown ([Telemetry.php](src/Infrastructure/Observability/Telemetry.php)); `TracedPdo`/`TracedStatement` crean un span por cada consulta a MySQL. Exporta a `OTEL_EXPORTER_ZIPKIN_ENDPOINT` con propagación W3C Trace Context; sin esa variable el tracing queda desactivado. |
+| Logs | `JsonLogger` propio, una línea JSON a `php://stderr` (no `error_log()`, que antepone el prefijo de texto de Apache). |
